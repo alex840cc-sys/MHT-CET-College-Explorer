@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MHT CET College Explorer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Print-specific styling for perfect PDFs */
+        @media print {
+            body { background-color: white !important; }
+            .no-print { display: none !important; }
+            main { width: 100% !important; margin: 0 !important; padding: 0 !important; }
+            .result-card { 
+                break-inside: avoid !important; 
+                page-break-inside: avoid !important; 
+                border: 1px solid #e2e8f0 !important;
+                margin-bottom: 1rem !important;
+                box-shadow: none !important;
+            }
+            #printHeader { display: block !important; }
+        }
+
+        /* Custom Checkbox styles */
+        input[type="checkbox"] { accent-color: #2563eb; width: 1rem; height: 1rem; cursor: pointer; }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800">
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <header class="mb-8 border-b pb-4 no-print">
+            <h1 class="text-4xl font-bold text-slate-900">MHT CET College Explorer</h1>
+            <p class="text-slate-500 mt-2">Filter, refine, and print your optimal college preference list.</p>
+        </header>
+
+        <div id="printHeader" class="hidden mb-6 border-b pb-4">
+            <h1 class="text-3xl font-bold text-slate-900">MHT CET Target Preference List</h1>
+            <p id="printSubheader" class="text-slate-500 mt-1"></p>
+        </div>
+
+        <div class="flex flex-col md:flex-row gap-8 relative">
+            <aside class="w-full md:w-1/3 lg:w-1/4 bg-white p-6 rounded-xl shadow-sm border border-slate-100 h-fit sticky top-4 no-print z-20">
+                <h2 class="text-xl font-semibold mb-6">Filters</h2>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">CAP Round</label>
+                    <select id="capRoundInput" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 text-sm">
+                        <option value="ALL">All Rounds (Show History)</option>
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Percentile Range</label>
+                    <div class="flex items-center gap-2">
+                        <input type="number" id="minPercentileInput" value="80.00" step="0.01" placeholder="Min" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 text-sm">
+                        <span class="text-slate-400 text-sm">to</span>
+                        <input type="number" id="maxPercentileInput" value="100.00" step="0.01" placeholder="Max" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 text-sm">
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Seat Category</label>
+                    <select id="categoryInput" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 text-sm">
+                        <option value="Open">Open (General)</option>
+                        <option value="OBC">OBC</option>
+                        <option value="SC">SC</option>
+                        <option value="ST">ST</option>
+                        <option value="NT1">NT1</option>
+                        <option value="NT2">NT2</option>
+                        <option value="NT3">NT3</option>
+                        <option value="VJ">VJ</option>
+                        <option value="EWS">EWS</option>
+                        <option value="TFWS">TFWS</option>
+                    </select>
+                </div>
+
+                <div class="mb-4 relative dropdown-container">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Institute Status</label>
+                    <button type="button" id="statusDropdownBtn" class="w-full text-left px-3 py-2 border rounded-lg bg-slate-50 hover:bg-slate-100 flex justify-between items-center text-sm">
+                        <span id="statusBtnText" class="truncate pr-2">All Statuses</span>
+                        <span>▼</span>
+                    </button>
+                    <div id="statusDropdownPanel" class="hidden absolute z-30 w-full bg-white border rounded-lg shadow-xl mt-1 flex flex-col overflow-hidden max-h-72 left-0 right-0">
+                        <div class="p-2 border-b bg-slate-50">
+                            <input type="text" id="statusSearch" placeholder="Search status (e.g. Un-Aided)..." class="w-full px-2 py-1.5 border rounded focus:outline-none focus:border-blue-500 text-sm">
+                        </div>
+                        <div id="statusCheckboxes" class="overflow-y-auto p-2 flex-1 space-y-1">
+                            <p class="text-xs text-slate-400 p-1">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-4 relative dropdown-container">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Target Branches</label>
+                    <button type="button" id="branchDropdownBtn" class="w-full text-left px-3 py-2 border rounded-lg bg-slate-50 hover:bg-slate-100 flex justify-between items-center text-sm">
+                        <span id="branchBtnText" class="truncate pr-2">All Branches</span>
+                        <span>▼</span>
+                    </button>
+                    <div id="branchDropdownPanel" class="hidden absolute z-30 w-full bg-white border rounded-lg shadow-xl mt-1 flex flex-col overflow-hidden max-h-72 left-0 right-0">
+                        <div class="p-2 border-b bg-slate-50">
+                            <input type="text" id="branchSearch" placeholder="Search branches..." class="w-full px-2 py-1.5 border rounded focus:outline-none focus:border-blue-500 text-sm">
+                        </div>
+                        <div id="branchCheckboxes" class="overflow-y-auto p-2 flex-1 space-y-1">
+                            <p class="text-xs text-slate-400 p-1">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-6 relative dropdown-container">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Target Locations</label>
+                    <button type="button" id="locationDropdownBtn" class="w-full text-left px-3 py-2 border rounded-lg bg-slate-50 hover:bg-slate-100 flex justify-between items-center text-sm">
+                        <span id="locationBtnText" class="truncate pr-2">All Locations</span>
+                        <span>▼</span>
+                    </button>
+                    <div id="locationDropdownPanel" class="hidden absolute z-30 w-full bg-white border rounded-lg shadow-xl mt-1 flex flex-col overflow-hidden max-h-72 left-0 right-0">
+                        <div class="p-2 border-b bg-slate-50">
+                            <input type="text" id="locationSearch" placeholder="Search cities..." class="w-full px-2 py-1.5 border rounded focus:outline-none focus:border-blue-500 text-sm">
+                        </div>
+                        <div id="locationCheckboxes" class="overflow-y-auto p-2 flex-1 space-y-1">
+                            <p class="text-xs text-slate-400 p-1">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-3">
+                    <button id="filterBtn" disabled class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors shadow-sm disabled:bg-blue-300 disabled:cursor-not-allowed">
+                        Initializing...
+                    </button>
+                    <button id="printBtn" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors shadow-sm hidden">
+                        🖨️ Print to PDF
+                    </button>
+                </div>
+            </aside>
+
+            <main class="w-full md:w-2/3 lg:w-3/4 z-10">
+                <div class="flex justify-between items-end mb-4 no-print">
+                    <h2 class="text-2xl font-semibold">Eligible Branches</h2>
+                    <span id="resultCount" class="text-sm font-medium bg-blue-100 text-blue-800 py-1 px-3 rounded-full">Fetching Data...</span>
+                </div>
+                
+                <div id="resultsContainer" class="grid grid-cols-1 gap-4">
+                    <div class="bg-white p-8 rounded-xl shadow-sm border border-slate-100 text-center text-slate-500 no-print animate-pulse">
+                        Downloading database, please wait a moment...
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        let database = [];
+
+        // UI Elements
+        const filterBtn = document.getElementById('filterBtn');
+        const printBtn = document.getElementById('printBtn');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const resultCount = document.getElementById('resultCount');
+        
+        // Custom Dropdown Elements
+        const sDropBtn = document.getElementById('statusDropdownBtn');
+        const sDropPanel = document.getElementById('statusDropdownPanel');
+        const sSearch = document.getElementById('statusSearch');
+        const sContainer = document.getElementById('statusCheckboxes');
+        const sBtnText = document.getElementById('statusBtnText');
+
+        const bDropBtn = document.getElementById('branchDropdownBtn');
+        const bDropPanel = document.getElementById('branchDropdownPanel');
+        const bSearch = document.getElementById('branchSearch');
+        const bContainer = document.getElementById('branchCheckboxes');
+        const bBtnText = document.getElementById('branchBtnText');
+
+        const lDropBtn = document.getElementById('locationDropdownBtn');
+        const lDropPanel = document.getElementById('locationDropdownPanel');
+        const lSearch = document.getElementById('locationSearch');
+        const lContainer = document.getElementById('locationCheckboxes');
+        const lBtnText = document.getElementById('locationBtnText');
+
+        // Toggle Dropdowns (Close others when one is opened)
+        sDropBtn.addEventListener('click', () => { sDropPanel.classList.toggle('hidden'); bDropPanel.classList.add('hidden'); lDropPanel.classList.add('hidden'); });
+        bDropBtn.addEventListener('click', () => { bDropPanel.classList.toggle('hidden'); sDropPanel.classList.add('hidden'); lDropPanel.classList.add('hidden'); });
+        lDropBtn.addEventListener('click', () => { lDropPanel.classList.toggle('hidden'); sDropPanel.classList.add('hidden'); bDropPanel.classList.add('hidden'); });
+
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.dropdown-container')) {
+                sDropPanel.classList.add('hidden');
+                bDropPanel.classList.add('hidden');
+                lDropPanel.classList.add('hidden');
+            }
+        });
+
+        // Search logic for dropdowns
+        function setupSearch(searchInput, containerId, checkboxClass) {
+            searchInput.addEventListener('input', function(e) {
+                const term = e.target.value.toLowerCase();
+                document.querySelectorAll(`.${checkboxClass}`).forEach(cb => {
+                    const label = cb.closest('label');
+                    if (cb.value.toLowerCase().includes(term)) label.style.display = 'flex';
+                    else label.style.display = 'none';
+                });
+            });
+        }
+        setupSearch(sSearch, 'statusCheckboxes', 'status-cb');
+        setupSearch(bSearch, 'branchCheckboxes', 'branch-cb');
+        setupSearch(lSearch, 'locationCheckboxes', 'loc-cb');
+
+        // Update Button Text when checkboxes are clicked
+        function updateButtonText(containerId, btnTextEl, defaultText, checkboxClass) {
+            document.getElementById(containerId).addEventListener('change', () => {
+                const checked = document.querySelectorAll(`.${checkboxClass}:checked`);
+                if (checked.length === 0) {
+                    btnTextEl.innerText = defaultText;
+                } else if (checked.length === 1) {
+                    let text = checked[0].value;
+                    if(text.length > 25) text = text.substring(0, 25) + '...';
+                    btnTextEl.innerText = text;
+                } else {
+                    btnTextEl.innerText = `${checked.length} selected`;
+                }
+            });
+        }
+        updateButtonText('statusCheckboxes', sBtnText, 'All Statuses', 'status-cb');
+        updateButtonText('branchCheckboxes', bBtnText, 'All Branches', 'branch-cb');
+        updateButtonText('locationCheckboxes', lBtnText, 'All Locations', 'loc-cb');
+
+
+        // ==========================================
+        // AUTO-LOAD JSON DATABASE ON PAGE LOAD
+        // ==========================================
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const response = await fetch('./MHT_CET_Database.json');
+                if (!response.ok) throw new Error("Could not fetch the database file.");
+                
+                database = await response.json();
+                populateDynamicFilters();
+                
+                // Unlock the UI
+                filterBtn.innerText = "Apply Filters";
+                filterBtn.disabled = false;
+                resultCount.innerText = "Database Ready";
+                resultsContainer.innerHTML = `
+                    <div class="bg-white p-8 rounded-xl shadow-sm border border-slate-100 text-center text-slate-500 no-print">
+                        Database loaded successfully! Select your target filters on the left and click <b>Apply Filters</b>.
+                    </div>`;
+
+            } catch (err) {
+                console.error(err);
+                filterBtn.innerText = "Error Loading";
+                resultsContainer.innerHTML = `
+                    <div class="bg-red-50 text-red-700 p-8 rounded-xl shadow-sm border border-red-200 text-center no-print">
+                        <h3 class="text-xl font-bold mb-2">Failed to load MHT_CET_Database.json</h3>
+                        <p>If you are testing this locally on your computer, browsers block auto-loading for security reasons.</p>
+                        <p class="mt-2 font-semibold">Upload both files to GitHub Pages or Netlify, and it will work perfectly!</p>
+                    </div>`;
+            }
+        });
+
+        function populateDynamicFilters() {
+            const rounds = new Set();
+            const statuses = new Set();
+            const branches = new Set();
+            const locations = new Set();
+
+            database.forEach(item => {
+                if(item.CAP_Round) rounds.add(item.CAP_Round);
+                if(item.Status) statuses.add(item.Status);
+                if(item.Branch) branches.add(item.Branch);
+                if(item.Location) locations.add(item.Location);
+            });
+
+            // Populate Rounds
+            const capRoundInput = document.getElementById('capRoundInput');
+            capRoundInput.innerHTML = '<option value="ALL">All Rounds (Show History)</option>';
+            Array.from(rounds).sort().forEach(r => {
+                capRoundInput.innerHTML += `<option value="${r}">${r}</option>`;
+            });
+
+            // Helper to build checkboxes
+            const buildCheckboxes = (set, container, className) => {
+                container.innerHTML = '';
+                Array.from(set).sort().forEach(val => {
+                    container.innerHTML += `
+                        <label class="flex items-start space-x-2 p-1.5 hover:bg-slate-100 rounded cursor-pointer transition-colors">
+                            <input type="checkbox" value="${val}" class="${className} rounded mt-0.5">
+                            <span class="text-sm select-none leading-tight">${val}</span>
+                        </label>
+                    `;
+                });
+            };
+
+            buildCheckboxes(statuses, sContainer, 'status-cb');
+            buildCheckboxes(branches, bContainer, 'branch-cb');
+            buildCheckboxes(locations, lContainer, 'loc-cb');
+        }
+
+        // Filtering Logic
+        filterBtn.addEventListener('click', () => {
+            if (database.length === 0) return;
+
+            // Close dropdowns if open
+            sDropPanel.classList.add('hidden');
+            bDropPanel.classList.add('hidden');
+            lDropPanel.classList.add('hidden');
+
+            // Parse inputs
+            const minPercentile = parseFloat(document.getElementById('minPercentileInput').value) || 0;
+            const maxPercentile = parseFloat(document.getElementById('maxPercentileInput').value) || 100;
+            const targetCategory = document.getElementById('categoryInput').value;
+            const targetRound = document.getElementById('capRoundInput').value;
+            
+            // Gather selected checkboxes
+            const selectedStatuses = Array.from(document.querySelectorAll('.status-cb:checked')).map(cb => cb.value);
+            const selectedBranches = Array.from(document.querySelectorAll('.branch-cb:checked')).map(cb => cb.value);
+            const selectedLocations = Array.from(document.querySelectorAll('.loc-cb:checked')).map(cb => cb.value);
+
+            // Validate Range
+            if (minPercentile > maxPercentile) {
+                alert("Minimum Percentile cannot be greater than Maximum Percentile!");
+                return;
+            }
+
+            // Run the filter
+            const filteredData = database.filter(item => {
+                const matchesCategory = item.Seat_Category === targetCategory;
+                const isEligible = item.Percentile >= minPercentile && item.Percentile <= maxPercentile;
+                const matchesRound = targetRound === "ALL" || item.CAP_Round === targetRound;
+                
+                const matchesStatus = selectedStatuses.length === 0 || selectedStatuses.includes(item.Status);
+                const matchesBranch = selectedBranches.length === 0 || selectedBranches.includes(item.Branch);
+                const matchesLocation = selectedLocations.length === 0 || selectedLocations.includes(item.Location);
+
+                return matchesCategory && isEligible && matchesRound && matchesStatus && matchesBranch && matchesLocation;
+            });
+
+            // Sort results by highest cutoff first
+            filteredData.sort((a, b) => b.Percentile - a.Percentile);
+
+            // Update UI
+            resultCount.innerText = `${filteredData.length} found`;
+            
+            // Prepare Print Header text
+            const printSubheader = document.getElementById('printSubheader');
+            let branchText = selectedBranches.length > 0 ? `${selectedBranches.length} Selected Branches` : "All Branches";
+            let locText = selectedLocations.length > 0 ? `${selectedLocations.length} Selected Locations` : "All Locations";
+            let roundText = targetRound === "ALL" ? "All Rounds" : targetRound;
+            
+            printSubheader.innerText = `Category: ${targetCategory} | Range: ${minPercentile}% - ${maxPercentile}% | ${roundText} | ${locText} | ${branchText}`;
+            
+            printBtn.classList.remove('hidden');
+            renderResults(filteredData);
+        });
+
+        // Print Logic
+        printBtn.addEventListener('click', () => {
+            window.print();
+        });
+
+        // Rendering Logic
+        function renderResults(data) {
+            resultsContainer.innerHTML = ''; 
+
+            if (data.length === 0) {
+                resultsContainer.innerHTML = `
+                    <div class="bg-white p-8 rounded-xl shadow-sm border border-slate-100 text-center text-slate-500 no-print">
+                        No colleges found matching your criteria. Try adjusting your percentile range or selecting different filters.
+                    </div>`;
+                return;
+            }
+
+            // Cap the DOM rendering to avoid lag
+            const displayData = data.slice(0, 300);
+
+            displayData.forEach(item => {
+                const card = document.createElement('div');
+                card.className = "result-card bg-white p-5 rounded-xl shadow-sm border border-slate-100 flex flex-col md:flex-row justify-between gap-4";
+                
+                card.innerHTML = `
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-xs font-bold text-slate-400 tracking-wider uppercase">${item.CAP_Round}</span>
+                            <span class="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md">${item.Status || "Unknown Status"}</span>
+                            <span class="text-xs px-2 py-0.5 bg-blue-50 text-blue-700 font-semibold rounded-md">${item.Location || "Unknown"}</span>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-900 leading-tight mb-1">${item.College_Name}</h3>
+                        <p class="text-blue-700 font-medium">${item.Branch}</p>
+                        <p class="text-sm text-slate-500 mt-2">Choice Code: <span class="font-mono bg-slate-100 px-1 rounded text-slate-800 border border-slate-200">${item.Choice_Code}</span></p>
+                    </div>
+                    <div class="md:text-right flex flex-col justify-center border-t md:border-t-0 md:border-l pt-4 md:pt-0 md:pl-6 mt-2 md:mt-0 min-w-[130px]">
+                        <p class="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-1">${item.Seat_Gender} | ${item.Seat_Quota}</p>
+                        <p class="text-3xl font-bold text-slate-900">${item.Percentile.toFixed(2)}<span class="text-lg text-slate-500 font-normal">%</span></p>
+                    </div>
+                `;
+                resultsContainer.appendChild(card);
+            });
+
+            if (data.length > 300) {
+                const notice = document.createElement('div');
+                notice.className = "text-center text-sm text-slate-400 py-4 no-print";
+                notice.innerText = `Showing top 300 out of ${data.length} results. Please use filters to narrow down before printing to save paper.`;
+                resultsContainer.appendChild(notice);
+            }
+        }
+    </script>
+</body>
+</html>
